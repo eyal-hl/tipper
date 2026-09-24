@@ -1,24 +1,23 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { playCurse, playFail, playTap, playWin } from "./audio.js";
+import {
+  BACK_LINES,
+  CASES,
+  PRIVACY_LINES,
+  UPCHARGE,
+  drawCase,
+  poolForCustom,
+  roastFor,
+} from "./cases.js";
 import "./App.css";
 
 const STARTING_BILL = 34.4;
-const FAIL_CHANCE = 0.32;
 
 const PRESETS = [
   { id: "15", percent: 15, label: "Good" },
   { id: "18", percent: 18, label: "Great" },
   { id: "20", percent: 20, label: "Wow!" },
   { id: "30", percent: 30, label: "Best Service Ever!" },
-];
-
-const CURSES = [
-  "Your fries will arrive cold, on purpose.",
-  "Every charger you own works at exactly one angle.",
-  "Your phone battery will live at 9%.",
-  "Autocorrect changes \"ok\" into \"20% is fine\".",
-  "The next tip screen starts at 30% and judges you.",
-  "Your favorite show will buffer during the joke.",
 ];
 
 function money(value) {
@@ -40,22 +39,16 @@ function App() {
   const [custom, setCustom] = useState("");
   const [shake, setShake] = useState(false);
   const [upcharged, setUpcharged] = useState(false);
+  const decks = useRef({});
 
   const customAmount = Number.parseFloat(custom);
   const customReady = Number.isFinite(customAmount) && customAmount >= 0;
   const customPercent = customReady && bill > 0 ? (customAmount / bill) * 100 : 0;
 
-  const customRoast = useMemo(() => {
-    if (!custom) return "Type a number. The machine is watching.";
-    if (!customReady) return "That is not a number. Bold strategy.";
-    if (customAmount === 0) return "Zero. The curse department just clocked in.";
-    if (customPercent < 15) return `${customPercent.toFixed(0)}%. The reader is already side-eyeing you.`;
-    if (customPercent < 18) return "Barely legal generosity. It might bounce.";
-    if (customPercent < 25) return "Respectable. The server's eyebrow went up.";
-    if (customPercent < 50) return "Oh we are doing philanthropy now.";
-    if (customAmount < 200) return "The owner is refreshing the boat listings.";
-    return "That is not a tip. That is a down payment.";
-  }, [custom, customAmount, customPercent, customReady]);
+  const customRoast = useMemo(
+    () => roastFor(custom, customAmount, customPercent, customReady),
+    [custom, customAmount, customPercent, customReady]
+  );
 
   function flashNotice(text) {
     setNotice(text);
@@ -71,25 +64,22 @@ function App() {
     playTap();
     const next = backPresses + 1;
     setBackPresses(next);
+    const line = BACK_LINES[(next - 1) % BACK_LINES.length];
     if (screen !== "select") {
       setScreen("select");
       setResult(null);
-      flashNotice("You can leave the screen. You cannot leave the bit.");
+      flashNotice(line);
       return;
     }
     if (next === 1) {
       bumpShake();
-      flashNotice("There is no back. There is only tip.");
+      flashNotice(line);
       return;
     }
-    const fee = next === 2 ? 1 : 1.5;
+    const fee = next % 2 === 0 ? 1 : 1.5;
     setBill((current) => roundMoney(current + fee));
     bumpShake();
-    flashNotice(
-      next === 2
-        ? `Loitering fee added. Bill is now higher. ${money(fee)}.`
-        : `Still here. Emotional damage fee ${money(fee)}.`
-    );
+    flashNotice(`${line} Fee ${money(fee)}.`);
   }
 
   function finish(nextResult, sound) {
@@ -101,135 +91,50 @@ function App() {
     else playWin();
   }
 
+  function present(drawn, tip, total) {
+    const ctx = {
+      tipText: money(tip),
+      totalText: money(total),
+      billText: money(bill),
+      percentText: bill > 0 ? `${((tip / bill) * 100).toFixed(0)}%` : "0%",
+    };
+    if (drawn.gray) {
+      setBlocked((current) => ({ ...current, [drawn.gray]: true }));
+    }
+    const sound = drawn.tone === "fail" ? "fail" : drawn.tone === "curse" ? "curse" : "win";
+    finish(
+      {
+        tone: drawn.tone,
+        title: drawn.title,
+        lines: drawn.lines(ctx),
+        tip,
+        total,
+        canUpcharge: Boolean(drawn.canUpcharge),
+      },
+      sound
+    );
+  }
+
   function charge(kind, amount, percent) {
     if (busy) return;
     playTap();
     setBusy(true);
     setScreen("processing");
-    setResult({
-      tone: "wait",
-      title: "Authorizing generosity",
-      lines: [`Holding ${money(amount)} hostage for a second.`],
-    });
 
     window.setTimeout(() => {
-      if (kind === "none" || amount <= 0) {
-        finish(
-          {
-            tone: "curse",
-            title: "No tip detected",
-            lines: [
-              "A curse has been placed on your afternoon.",
-              ...CURSES,
-              "It lifts if you pick a real amount. Allegedly.",
-            ],
-          },
-          "curse"
-        );
-        return;
-      }
-
-      const cheap =
-        (kind === "15" && !blocked["15"] && Math.random() < FAIL_CHANCE) ||
-        (kind === "custom" && percent < 15) ||
-        (kind === "custom" && blocked["15"] && Math.abs(percent - 15) < 0.6);
-
-      if (cheap) {
-        if (kind === "15" || (kind === "custom" && Math.abs(percent - 15) < 0.6)) {
-          setBlocked((current) => ({ ...current, "15": true }));
-        }
-        finish(
-          {
-            tone: "fail",
-            title: "Payment failed",
-            lines:
-              kind === "15"
-                ? [
-                    "15% was declined for being the cheapest button.",
-                    "That amount is grayed out now.",
-                    "Pick something the card reader can respect.",
-                  ]
-                : [
-                    `${money(amount)} bounced. The terminal knows a loophole when it sees one.`,
-                    "15% is retired. Aim higher.",
-                  ],
-          },
-          "fail"
-        );
-        return;
-      }
-
-      const tip = roundMoney(amount);
+      const tip = roundMoney(Math.max(0, amount));
       const total = roundMoney(bill + tip);
-      finish(receiptFor(kind, percent, tip, total), "win");
-    }, 850);
-  }
-
-  function receiptFor(kind, percent, tip, total) {
-    if (percent >= 100 || tip >= 200) {
-      return {
-        tone: "legend",
-        title: "Security hold",
-        lines: [
-          `${money(tip)} on a ${money(bill)} bill.`,
-          "The owner already left for the boat dealership.",
-          `Total theoretically ${money(total)}. Spiritually, you bought the restaurant.`,
-        ],
-        tip,
-        total,
-      };
-    }
-    if (percent >= 30 || kind === "30") {
-      return {
-        tone: "wow",
-        title: "Best service ever",
-        lines: [
-          `Tip ${money(tip)}. Total ${money(total)}.`,
-          "A busser just named a kayak after you.",
-          "The terminal wanted to bump this to 45%. You can allow it, if you are that kind of myth.",
-        ],
-        tip,
-        total,
-        canUpcharge: true,
-      };
-    }
-    if (percent >= 20) {
-      return {
-        tone: "wow",
-        title: "Wow",
-        lines: [
-          `Tip ${money(tip)}. Total ${money(total)}.`,
-          "You have been removed from the group chat titled bad tippers.",
-          "The server practiced this exact face in the walk-in.",
-        ],
-        tip,
-        total,
-      };
-    }
-    if (percent >= 18) {
-      return {
-        tone: "mid",
-        title: "Great",
-        lines: [
-          `Tip ${money(tip)}. Total ${money(total)}.`,
-          "Great is what people say when it is not wow.",
-          "The kitchen will describe you as fine.",
-        ],
-        tip,
-        total,
-      };
-    }
-    return {
-      tone: "mid",
-      title: "Good",
-      lines: [
-        `Tip ${money(tip)}. Total ${money(total)}.`,
-        "It went through. The card reader sighed.",
-        "Good, which is the compliment you give a parking spot.",
-      ],
-      tip,
-      total,
-    };
+      if (kind === "none" || tip <= 0) {
+        present(drawCase(decks.current, "none", CASES.none), 0, bill);
+        return;
+      }
+      if (kind === "custom") {
+        const pool = poolForCustom(tip, percent);
+        present(drawCase(decks.current, pool.id, pool.cases), tip, total);
+        return;
+      }
+      present(drawCase(decks.current, kind, CASES[kind]), tip, total);
+    }, 700);
   }
 
   function choosePreset(preset) {
@@ -271,19 +176,20 @@ function App() {
   }
 
   function allowUpcharge() {
-    if (!result?.tip) return;
     playWin();
     const tip = roundMoney(bill * 0.45);
     const total = roundMoney(bill + tip);
+    const drawn = drawCase(decks.current, "upcharge", UPCHARGE);
     setUpcharged(true);
     setResult({
-      tone: "legend",
-      title: "45%. Obviously.",
-      lines: [
-        `Tip ${money(tip)}. Total ${money(total)}.`,
-        "The special is now just your name in ketchup.",
-        "A manager is crying in a productive way.",
-      ],
+      tone: drawn.tone,
+      title: drawn.title,
+      lines: drawn.lines({
+        tipText: money(tip),
+        totalText: money(total),
+        billText: money(bill),
+        percentText: "45%",
+      }),
       tip,
       total,
     });
@@ -291,6 +197,7 @@ function App() {
 
   function resetCustomer() {
     playTap();
+    decks.current = {};
     setBill(STARTING_BILL);
     setBlocked({});
     setBackPresses(0);
@@ -417,7 +324,7 @@ function App() {
         className="privacy"
         onClick={() => {
           playTap();
-          flashNotice("We already know. We saw you look at No Tip.");
+          flashNotice(PRIVACY_LINES[Math.floor(Math.random() * PRIVACY_LINES.length)]);
         }}
       >
         clover.com/privacy
