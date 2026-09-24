@@ -1,12 +1,13 @@
 # tipper
 
-A phone-friendly meme of a tip screen. Nothing is charged. The buttons just react.
+A sideways-phone meme of a tip screen. Nothing is charged. The buttons just react.
 
-- **15%** sometimes declines, then that button goes gray and you have to pick another amount.
-- **No Tip** applies a curse.
-- **18% / 20% / 30%** each get their own little receipt.
-- **30%** can be talked into 45%.
-- **Custom** roasts the number while you type it.
+Hold the phone sideways. Each button has ten outcomes and shows a new one until it has used the set.
+
+- **15%** has two decline outcomes. Those gray the button out.
+- **No Tip** has ten curses.
+- **18% / 20% / 30%** each have ten receipts. Some 30% receipts can be talked into 45%.
+- **Custom** roasts while you type, then picks from ten reactions for that size of tip.
 - The back arrow is not an exit.
 
 After this is merged, GitHub Actions publishes it to:
