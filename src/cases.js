@@ -757,3 +757,101 @@ export function poolForCustom(amount, percent) {
   if (percent < 100 && amount < 200) return { id: "custom-high", cases: CUSTOM_HIGH };
   return { id: "custom-boat", cases: CUSTOM_BOAT };
 }
+
+export const EIGHTEEN_FAILS = [
+  {
+    tone: "fail",
+    title: "Payment failed",
+    gray: "18",
+    lines: () => ["18% was declined out of spite.", "15% already failed. This one can too."],
+  },
+  {
+    tone: "fail",
+    title: "Payment failed",
+    gray: "18",
+    lines: () => ["The reader is meaner now.", "18% is gray. Pick a braver button."],
+  },
+  {
+    tone: "fail",
+    title: "Still rude",
+    gray: "18",
+    lines: () => ["Still rude did not clear.", "The screen would like 20 or an apology."],
+  },
+];
+
+export const WORSE = [
+  {
+    tone: "curse",
+    title: "Second zero",
+    lines: () => ["Dessert was a gift. This was a choice.", "You are banned from brunch."],
+  },
+  {
+    tone: "curse",
+    title: "The cake saw that",
+    lines: () => ["The cake is going back angry.", "Your next coffee will be decaf and they will lie."],
+  },
+  {
+    tone: "curse",
+    title: "Worse curse",
+    lines: () => ["Round two, still nothing.", "Every fork you own will be slightly bent."],
+  },
+  {
+    tone: "curse",
+    title: "Banned",
+    lines: () => ["The host wrote your name in the bad book.", "It is just a notebook. It still counts."],
+  },
+  {
+    tone: "curse",
+    title: "After dessert",
+    lines: () => ["You ate the bit and tipped air.", "Your pillow will be warm on one side only. The wrong side."],
+  },
+  {
+    tone: "curse",
+    title: "No tip, again",
+    lines: () => ["The terminal sighed twice.", "Your maps app will say 4 minutes for 20 minutes."],
+  },
+  {
+    tone: "curse",
+    title: "Kitchen vote",
+    lines: () => ["The kitchen voted.", "It was unanimous, and it was not kind."],
+  },
+  {
+    tone: "curse",
+    title: "Worse",
+    lines: () => ["A curse, family size.", "Your phone will ring in another room, forever."],
+  },
+  {
+    tone: "curse",
+    title: "Dessert tax",
+    lines: () => ["The cake remembers.", "You will always be seated by the swinging door."],
+  },
+  {
+    tone: "curse",
+    title: "Final zero",
+    lines: () => ["No tip after cake is a personality.", "Banned from brunch. Tell your friends why."],
+  },
+];
+
+export const DODGE_LINES = [
+  "No Tip moved. It does that now.",
+  "It shrank. Chase it again.",
+  "Last dodge. The next press is the curse.",
+];
+
+export const CREEP_LINES = [
+  "You waited. 15% quietly became 18%.",
+  "Still deciding. The cheap button is 20% now.",
+];
+
+export function verdictFor(stats) {
+  const best = stats.tips.reduce((max, tip) => Math.max(max, tip.percent), 0);
+  if (stats.curses >= 1 && stats.round >= 2) return "Banned from brunch.";
+  if (stats.curses >= 2) return "Banned from brunch.";
+  if (stats.curses === 1) return "The kitchen remembers your face.";
+  if (stats.declines >= 2) return "Known cheap. The reader kept the receipt.";
+  if (stats.declines === 1) return "A low button tried. The machine refused.";
+  if (best >= 30) return "Tell your mom. She will not believe the percent.";
+  if (best >= 20) return "Allowed to leave. Mention the wow if you must.";
+  if (stats.tips.length === 0) return "Walked up, tipped nothing, still guilty.";
+  return "Fine. The fries will be room temperature.";
+}

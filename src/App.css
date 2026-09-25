@@ -14,6 +14,10 @@
   overflow: hidden;
 }
 
+.terminal.mean {
+  background: #3a2a2e;
+}
+
 .terminal.shake {
   animation: shake 0.4s linear;
 }
@@ -71,9 +75,13 @@
 
 .bill {
   margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: #d5e1e7;
   font-size: clamp(12px, 2.2vh, 15px);
   letter-spacing: 0.16em;
-  color: #d5e1e7;
+  cursor: pointer;
 }
 
 .toast {
@@ -149,6 +157,10 @@
   opacity: 0.38;
   cursor: not-allowed;
   border-style: dashed;
+}
+
+.tip.runner {
+  transition: transform 0.25s ease;
 }
 
 .status {
@@ -319,6 +331,29 @@
   min-height: 46px;
   padding: 0 14px;
   font-size: 15px;
+}
+
+.report {
+  flex: 1;
+  justify-content: center;
+  border: 1.5px solid rgba(190, 210, 218, 0.45);
+  border-radius: 12px;
+  padding: 14px 16px;
+  background: #2a3b42;
+}
+
+.portrait-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: #24343a;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  text-align: center;
+  padding: 24px;
 }
 
 .privacy {
