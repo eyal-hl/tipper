@@ -16,6 +16,10 @@ body {
   font-family: "Avenir Next", "Segoe UI", "Helvetica Neue", sans-serif;
 }
 
+body.mean {
+  background: #3a2a2e;
+}
+
 button,
 input {
   font-family: inherit;
